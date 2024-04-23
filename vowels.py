@@ -8,6 +8,9 @@ from datetime import datetime
 from fatt import FATTLS
 from qifft import QIFFT
 from utils import load_vowels, plotter, rmse
+from os.path import join as join
+seed = 42
+np.random.seed(seed)
 
 
 def parse_args():
@@ -43,6 +46,7 @@ def main():
     else:
         path = None
     del args
+    msg_log = ""
 
     # Get vowel signal frames:
     male_vowels, male_names = load_vowels(path='male', sec=sec, sr=fs)
@@ -104,14 +108,19 @@ def main():
     # Main loop:
     for i, vowel in enumerate(vowels):
 
-        print(f"{bar}\nvowel = {i + 1}/{no_vowels} ({names[i]})")
+        msg = f"{bar}\nvowel = {i + 1}/{no_vowels} ({names[i]})"
+        print(msg)
+        msg_log += '\n' + msg
 
         # Sinusoidal estimation with FATT + Least Squares (LS):
         tic = perf_counter()
         fatt_freqs[i], fatt_amps[i], fatt_recons[i] = fattls_model.estimate(signal=vowel)
         fatt_time[i] = perf_counter() - tic
         fatt_rmse[i] = rmse(true=vowel, pred=fatt_recons[i])
-        print(f"FATTLS: {(fatt_time[i]) * 1000:.2f} ms | RMSE {fatt_rmse[i]:.3f}")
+
+        msg = f"FATTLS: {(fatt_time[i]) * 1000:.2f} ms | RMSE {fatt_rmse[i]:.3f}"
+        print(msg)
+        msg_log += '\n' + msg
 
         # Sinusoidal estimation with QIFFT:
         tic = perf_counter()
@@ -119,7 +128,10 @@ def main():
         qifft_freqs[i, :len(f)], qifft_amps[i, :len(a)], qifft_phases[i, :len(p)] = f, a, p
         qifft_time[i] = perf_counter() - tic
         qifft_rmse[i] = rmse(true=vowel, pred=qifft_recons[i])
-        print(f"QIFFT:  {(qifft_time[i]) * 1000:.2f} ms   | RMSE {qifft_rmse[i]:.3f}")
+
+        msg = f"QIFFT:  {(qifft_time[i]) * 1000:.2f} ms   | RMSE {qifft_rmse[i]:.3f}"
+        print(msg)
+        msg_log += '\n' + msg
 
         # Visualize reconstructions & residuals:
         plotter(
@@ -133,14 +145,19 @@ def main():
             name=f"{names[i]}_{i}"
         )
 
-    print(
-        f"{bar}\nFinished:"
-        f"\n Average FATTLS time: {np.mean(fatt_time) * 1000:.2f} ms"
-        f"\n Average FATTLS RMSE: {np.mean(fatt_rmse):.3f}"
-        f"\n Average QIFFT  time: {np.mean(qifft_time) * 1000:.2f} ms"
-        f"\n Average QIFFT  RMSE: {np.mean(qifft_rmse):.3f}"
+    msg = f"{bar}\nFinished:" \
+        f"\n Average FATTLS time: {np.mean(fatt_time) * 1000:.2f} ms" \
+        f"\n Average FATTLS RMSE: {np.mean(fatt_rmse):.3f}" \
+        f"\n Average QIFFT  time: {np.mean(qifft_time) * 1000:.2f} ms" \
+        f"\n Average QIFFT  RMSE: {np.mean(qifft_rmse):.3f}" \
         f"\n{bar}"
-    )
+
+    print(msg)
+    msg_log += '\n' + msg
+
+    if save:
+        with open(join(path, "msg_log.txt"), 'w') as file:
+            file.write(msg_log)
 
 
 if __name__ == "__main__":

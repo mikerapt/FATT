@@ -10,7 +10,7 @@ def rmse(true, pred):
     return np.sqrt(np.mean((true - pred) ** 2))
 
 
-def load_vowels(path=None, sec=0.02, sr=8000):
+def load_vowels(path=None, sec=0.06, sr=8000):
     vowels = []
     names = []
     for name in listdir(path):
