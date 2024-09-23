@@ -13,7 +13,7 @@ pip install tqdm
 ```
 
 ## 3) File Descriptions
-qifft.py: This file contains the implementation of the QIFFT algorithm, which is used for comparison against FATT-LS.
+```bash qifft.py```: This file contains the implementation of the QIFFT algorithm, which is used for comparison against FATT-LS.
 
 fattls.py: This script implements FATT-LS, which iteratively estimates sinusoidal parameters from input signals.
 
