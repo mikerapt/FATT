@@ -3,6 +3,9 @@ from scipy.special import softmax
 
 
 class FATTLS:
+    # This class implements the Fourier Attention (FATT) frequency estimator
+    # with the Least Squares approach (FATT-LS) according to
+    # [paper url].
     def __init__(self, fs, time, df, f_min, f_max, no_sins, a, mode):
         # Hyperparameters:
         self.fs = fs
@@ -80,7 +83,7 @@ class FATTLS:
         return self.output(softmax(t - max(t)))
 
     def estimate(self, signal):
-        """Estimate FATT-LS sinusoidal parameters."""
+        """The FATT-LS algorithm."""
         # Initialize:
         sig = np.reshape(a=signal, newshape=(len(signal), 1))
         estimated = np.zeros(shape=(len(sig), 1))
