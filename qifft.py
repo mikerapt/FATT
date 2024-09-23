@@ -4,7 +4,8 @@ from scipy.signal import find_peaks
 
 class QIFFT:
     """This class implements the Quadratically Interpolated
-    Fast Fourier Transform (QIFFT) for sinusoidal analysis/synthesis."""
+    Fast Fourier Transform (QIFFT) for sinusoidal analysis/synthesis
+    according to https://ccrma.stanford.edu/STANM/stanms/stanm114/."""
     def __init__(self, fs, time, nfft, win, no_sins):
         self.fs = fs
         self.t = np.reshape(a=time, newshape=len(time))
