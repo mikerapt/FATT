@@ -14,8 +14,11 @@ pip install tqdm
 
 ## 3) File Descriptions
 qifft.py: This file contains the implementation of the QIFFT algorithm, which is used for comparison against FATT-LS.
+
 fattls.py: This script implements FATT-LS, which iteratively estimates sinusoidal parameters from input signals.
+
 utils.py: Contains utility functions used throughout the code, such as handling signal processing and data loading.
+
 vowels.py: This script includes the experimental setup for vowel analysis, which compares the performance of the FATT and QIFFT methods on recorded vowels.
 
 ## 4) Usage
