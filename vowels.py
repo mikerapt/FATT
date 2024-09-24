@@ -1,145 +1,193 @@
 # lib imports:
+import logging
 import numpy as np
 from pathlib import Path
 from time import perf_counter
 from datetime import datetime
-from os.path import join as join
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+
 # local imports:
 from qifft import QIFFT
 from fattls import FATTLS
-from utils import load_vowels, plotter, rmse
+from utils import load_vowels, plotter, rmse, LOG_BAR
 
 seed = 42
 np.random.seed(seed)
 
 
 def parse_args():
-    parser = ArgumentParser()
-    # Save figures:
-    parser.add_argument("--save", default=True)
+    parser = ArgumentParser(
+        description=(
+            "Compare the performance of the FATT-LS and QIFFT"
+            " methods for sinusoidal analysis/synthesis on recorded vowels."
+            " For more details, please visit the original paper."
+        ),
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--save", type=bool, default=True,
+        help="Save figures to file."
+    )
+    parser.add_argument(
+        "--male", default="male",
+        help="Directory of male vowels found in the script's CWD.",
+    )
+    parser.add_argument(
+        "--female", default="female",
+        help="Directory of female vowels found in the script's CWD.",
+    )
     # Vowel frames' hyperparameters:
-    parser.add_argument("--sec", default=0.06)
-    parser.add_argument("--fs", default=8000)
+    parser.add_argument(
+        "--sec", type=float, default=0.06,
+        help="Input signal duration in seconds."
+    )
+    parser.add_argument(
+        "--fs", type=int, default=8000,
+        help="Input signal sampling rate."
+    )
     # Sinusoidal parameter estimation hyperparameters:
-    parser.add_argument("--df", default=0.1)
-    parser.add_argument("--a", default=-0.5)
-    parser.add_argument("--sins", default=30)
-    parser.add_argument("--fmin", default=0)
-    parser.add_argument("--fmax", default=4000)
-    parser.add_argument("--mode", default="max")
+    parser.add_argument(
+        "--df", type=float, default=0.1,
+        help=(
+            "The FATT frequency step: Defines how fine-grained the"
+            " FATT frequency matrix is, i.e., the desired decimal"
+            " point accuracy of FATT's frequency predictions."
+            " Decreasing df increases memory requirements but"
+            " gives more precision to FATT, and vise versa."
+        )
+    )
+    parser.add_argument(
+        "--a", type=float, default=-0.5,
+        help="The FATT normalization parameter."
+    )
+    parser.add_argument(
+        "--sins", type=int, default=30,
+        help="Maximum number of sinusoids to be estimated."
+    )
+    parser.add_argument(
+        "--fmin", type=float, default=0,
+        help="Minimum detectable frequency."
+    )
+    parser.add_argument(
+        "--fmax", type=float, default=4000,
+        help="Maximum detectable frequency."
+    )
+    parser.add_argument(
+        "--mode", default="max",
+        choices=("avg", "average", "med", "median", "max", "maximum"),
+        help="FATT frequency estimator choice."
+    )
     return parser.parse_args()
 
 
 def main():
-    # Get arguments:
     args = parse_args()
-    save, sec, fs = str(args.save), float(args.sec), int(args.fs)
-    df, a, no_sins = float(args.df), float(args.a), int(args.sins)
-    fmin, fmax, mode = float(args.fmin), float(args.fmax), str(args.mode)
-    if save:
+
+    # Check if we save:
+    if args.save:
         path = Path(f"results-{datetime.today().strftime('%d-%m-%Y-%H.%M')}")
         Path(path).mkdir(parents=True, exist_ok=True)
     else:
         path = None
-    del args
-    msg_log = ""
+
+    # Logging config, log to stdout and file (if any):
+    logging_handlers = [logging.StreamHandler()]
+    if path:
+        logging_handlers.append(logging.FileHandler(path / "log.txt"))
+    logging.basicConfig(
+        level=logging.INFO, format="%(message)s", handlers=logging_handlers
+    )
 
     # Get vowel signal frames:
-    male_vowels, male_names = load_vowels(path='male', sec=sec, sr=fs)
-    female_vowels, female_names = load_vowels(path='female', sec=sec, sr=fs)
+    male_vowels, male_names = load_vowels(
+        path=args.male, sec=args.sec, sr=args.fs
+    )
+    female_vowels, female_names = load_vowels(
+        path=args.female, sec=args.sec, sr=args.fs
+    )
     vowels = np.concatenate((male_vowels, female_vowels), axis=0)
-    male_names = np.char.replace(male_names, '.wav', '-male')
-    female_names = np.char.replace(female_names, '.wav', '-female')
+    male_names = np.char.replace(male_names, ".wav", "-male")
+    female_names = np.char.replace(female_names, ".wav", "-female")
     names = np.concatenate((male_names, female_names), axis=0)
     no_vowels = vowels.shape[0]
-    len_vowels = len(vowels[0])
 
-    # time axis definition:
-    n = np.linspace(0, len_vowels - 1, num=len_vowels)
-    t = np.reshape(n, (n.size, 1)) / fs
-    # For same resolution: NFFT = 2 * len(f_matrix):
-    nfft = 2 * len(np.arange(start=fmin, stop=fmax, step=df))
+    # Time axis definition:
+    n = np.linspace(0, len(vowels[0]) - 1, num=len(vowels[0]))
+    t = np.reshape(n, (n.size, 1)) / args.fs
+    # For same resolution (fairness): NFFT = 2 * len(f_matrix):
+    nfft = 2 * len(np.arange(start=args.fmin, stop=args.fmax, step=args.df))
     # Keep predicted sinusoidal parameters:
-    fatt_freqs, fatt_amps = (
-        np.zeros((no_vowels, size)) for size in [no_sins, no_sins * 2]
+    fattls_freqs, fattls_amps = (
+        np.zeros((no_vowels, size)) for size in [args.sins, args.sins * 2]
     )
     qifft_freqs, qifft_amps, qifft_phases = (
-        np.zeros((no_vowels, no_sins)) for _ in range(3)
+        np.zeros((no_vowels, args.sins)) for _ in range(3)
     )
-    # Keep reconstructions, RMSE, and run time:
-    qifft_recons, fatt_recons = (
-        np.zeros(vowels.shape) for _ in range(2)
-    )
-    fatt_rmse, qifft_rmse, fatt_time, qifft_time = (
+    # Keep reconstructions, RMSE, and execution time:
+    qifft_recons, fattls_recons = (np.zeros(vowels.shape) for _ in range(2))
+    fattls_rmse, qifft_rmse, fattls_time, qifft_time = (
         np.zeros(no_vowels) for _ in range(4)
     )
     # Initialize the two sinusoidal estimators:
     qifft_model = QIFFT(
-        fs=fs, time=t, nfft=nfft, win=np.hanning, no_sins=no_sins
+        fs=args.fs, time=t, nfft=nfft, win=np.hanning, no_sins=args.sins
     )
     fattls_model = FATTLS(
-        fs=fs, time=t, df=df, f_min=fmin, f_max=fmax,
-        no_sins=no_sins, a=a, mode=mode
+        fs=args.fs, time=t, df=args.df, f_min=args.fmin, f_max=args.fmax,
+        no_sins=args.sins, a=args.a, mode=args.mode,
     )
-    bar = 64 * '-'
+
     # Main loop:
     for i, vowel in enumerate(vowels):
-        # Logging:
-        msg = f"{bar}\nvowel = {i + 1}/{no_vowels} ({names[i]})"
-        print(msg)
-        msg_log += '\n' + msg
+        logging.info(f"{LOG_BAR}\nvowel = {i + 1}/{no_vowels} ({names[i]})")
+
         # Sinusoidal estimation with FATT + Least Squares (FATT-LS):
         tic = perf_counter()
-        fatt_freqs[i], fatt_amps[i], fatt_recons[i] = fattls_model.estimate(
-            signal=vowel
+        fattls_freqs[i], fattls_amps[i], fattls_recons[i] = (
+            fattls_model.estimate(signal=vowel)
         )
-        fatt_time[i] = perf_counter() - tic
-        fatt_rmse[i] = rmse(true=vowel, pred=fatt_recons[i])
-        # Logging:
-        msg = (
-            f"FATT-LS: {fatt_time[i] * 1000:.2f} ms | "
-            f"RMSE {fatt_rmse[i]:.3f}"
+        fattls_time[i] = perf_counter() - tic
+        fattls_rmse[i] = rmse(true=vowel, pred=fattls_recons[i])
+        logging.info(
+            f"FATT-LS: {fattls_time[i] * 1000:<6.2f} ms | "
+            f"RMSE {fattls_rmse[i]:.3f}"
         )
-        print(msg)
-        msg_log += '\n' + msg
+
         # Sinusoidal estimation with QIFFT:
         tic = perf_counter()
         f, a, p, qifft_recons[i] = qifft_model.estimate(signal=vowel)
         (
-            qifft_freqs[i, :len(f)],
-            qifft_amps[i, :len(a)],
-            qifft_phases[i, :len(p)]
-        ) = f, a, p
+            qifft_freqs[i, : len(f)],
+            qifft_amps[i, : len(a)],
+            qifft_phases[i, : len(p)],
+        ) = (f, a, p)
         qifft_time[i] = perf_counter() - tic
         qifft_rmse[i] = rmse(true=vowel, pred=qifft_recons[i])
-        # Logging:
-        msg = (
-            f"QIFFT:  {qifft_time[i] * 1000:.2f} ms   | "
+        logging.info(
+            f"QIFFT:   {qifft_time[i] * 1000:<6.2f} ms | "
             f"RMSE {qifft_rmse[i]:.3f}"
         )
-        print(msg)
-        msg_log += '\n' + msg
+
         # Visualize reconstructions & residuals:
         plotter(
             time=t, original=vowel,
-            qifft=qifft_recons[i], fattls=fatt_recons[i],
-            show=False, save=save, path=path, name=f"{names[i]}_{i}"
+            qifft=qifft_recons[i], fattls=fattls_recons[i],
+            show=False, save_to=path, name=f"{names[i]}_{i}",
         )
-    # Logging:
-    msg = f"{bar}\nFinished:" \
-        f"\n Average FATT-LS time: {np.mean(fatt_time) * 1000:.2f} ms" \
-        f"\n Average FATT-LS RMSE: {np.mean(fatt_rmse):.3f}" \
-        f"\n Average QIFFT  time: {np.mean(qifft_time) * 1000:.2f} ms" \
-        f"\n Average QIFFT  RMSE: {np.mean(qifft_rmse):.3f}" \
-        f"\n{bar}"
-    print(msg)
-    msg_log += '\n' + msg
 
-    if save:
-        with open(join(path, "msg_log.txt"), 'w') as file:
-            file.write(msg_log)
-    return
+    logging.info(
+        "\n".join(
+            (
+                LOG_BAR,
+                "Finished:",
+                f" Average FATT-LS time: {np.mean(fattls_time) * 1000:.2f} ms",
+                f" Average FATT-LS RMSE: {np.mean(fattls_rmse):.3f}",
+                f" Average QIFFT  time: {np.mean(qifft_time) * 1000:.2f} ms",
+                f" Average QIFFT  RMSE: {np.mean(qifft_rmse):.3f}",
+                LOG_BAR,
+            )
+        )
+    )
 
 
 if __name__ == "__main__":

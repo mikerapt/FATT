@@ -3,9 +3,9 @@ from scipy.special import softmax
 
 
 class FATTLS:
-    # This class implements the Fourier Attention (FATT) frequency estimator
-    # with the Least Squares approach (FATT-LS) according to
-    # [paper url].
+    """This class implements the Fourier Attention (FATT) frequency estimator
+    with the Least Squares approach (FATT-LS) for sinusoidal analysis/synthesis
+    according to [paper url]."""
     def __init__(self, fs, time, df, f_min, f_max, no_sins, a, mode):
         # Hyperparameters:
         self.fs = fs
@@ -13,24 +13,23 @@ class FATTLS:
         self.pi2t = 2 * np.pi * self.t
         self.df = df
         self.no_sins = no_sins
-        self.norm = len(time)**a
+        self.norm = len(time) ** a
         # FATT matrices:
-        self.f_matrix = np.arange(
-            start=f_min, stop=f_max, step=self.df
-        )
+        self.f_matrix = np.arange(start=f_min, stop=f_max, step=self.df)
         self.f_matrix = np.reshape(
             a=self.f_matrix, newshape=(self.f_matrix.size, 1)
         )
         self.values = self.f_matrix
         self.keys = np.concatenate(
-            (np.sin(self.pi2t.T * self.f_matrix),
-             np.cos(self.pi2t.T * self.f_matrix)),
-            axis=0
+            (
+                np.sin(self.pi2t.T * self.f_matrix),
+                np.cos(self.pi2t.T * self.f_matrix)
+            ), axis=0,
         )
         # FATT estimator (output):
         if mode == "avg" or mode == "average":
             self.output = self.average
-        elif mode == "med" or mode == "median:":
+        elif mode == "med" or mode == "median":
             self.output = self.median
         else:
             self.output = self.maximum
@@ -53,23 +52,24 @@ class FATTLS:
         estimated FATT sinusoidal parameters."""
         return np.sum(
             amps[::2] * np.sin(self.pi2t * freqs) +
-            amps[1::2] * np.cos(self.pi2t * freqs), axis=1
+            amps[1::2] * np.cos(self.pi2t * freqs),
+            axis=1,
         ).reshape(-1, 1)
 
     def least_squares(self, signal, freq):
         """Returns a_hat and b_hat of Fourier attention."""
         # Update least squares matrix:
         self.m = np.concatenate(
-            (self.m,
-             np.sin(self.pi2t * freq),
-             np.cos(self.pi2t * freq)),
-            axis=1
+            (
+                self.m, np.sin(self.pi2t * freq), np.cos(self.pi2t * freq)
+            ), axis=1
         )
         # Return the least square minimizers alpha, beta:
         return np.matmul(
             np.matmul(
                 np.linalg.pinv(np.matmul(self.m.T, self.m)), self.m.T
-            ), signal)[:, 0]
+            ), signal
+        )[:, 0]
 
     def fatt(self, signal):
         """Estimate a frequency based on the Fourier attention mechanism."""
@@ -88,14 +88,14 @@ class FATTLS:
         sig = np.reshape(a=signal, newshape=(len(signal), 1))
         estimated = np.zeros(shape=(len(sig), 1))
         freqs = np.zeros(self.no_sins)
-        amps = np.zeros(self.no_sins*2)
+        amps = np.zeros(self.no_sins * 2)
         residual = sig
         # Main loop:
         for i in range(self.no_sins):
             # Estimate frequency via FATT:
             freqs[i] = self.fatt(signal=residual)
             # Estimate alpha, beta amplitudes via least squares:
-            amps[:2*(i+1)] = self.least_squares(signal=sig, freq=freqs[i])
+            amps[: 2 * (i + 1)] = self.least_squares(signal=sig, freq=freqs[i])
             # Get reconstruction:
             estimated = self.reconstruct(freqs=freqs, amps=amps)
             # Subtract reconstruction from original and repeat:

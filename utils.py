@@ -5,28 +5,29 @@ from os.path import isfile
 from os.path import join as join
 import matplotlib.pyplot as plt
 
+LOG_BAR = 64 * "-"
+
 
 def rmse(true, pred):
     return np.sqrt(np.mean((true - pred) ** 2))
 
 
 def load_vowels(path=None, sec=0.06, sr=8000):
+    """Load vowels from directory `path` found in the CWD"""
     vowels, names = [], []
     for name in listdir(path):
         if isfile(join(path, name)):
             names.append(name)
             vowel, _ = librosa.load(join(path, name), sr=sr)
-            x = vowel[sr:sr + int(sr * sec)]
+            x = vowel[sr: sr + int(sr * sec)]
             x /= max(abs(x))
             x -= np.mean(x)
             vowels.append(x)
     return np.asarray(vowels), np.asarray(names)
 
 
-def plotter(
-    time, original, qifft, fattls,
-    show=True, save=False, path=None, name=None
-):
+def plotter(time, original, qifft, fattls, show=True, save_to=None, name=None):
+    """Plots original vs reconstructions and residuals in time domain."""
 
     plt.figure(figsize=(10, 15))
 
@@ -43,8 +44,8 @@ def plotter(
 
     # Original vs. QIFFT reconstruction:
     plt.subplot(3, 1, 2)
-    plt.plot(time, original, label='Original')
-    plt.plot(time, qifft, label='QIFFT')
+    plt.plot(time, original, label="Original")
+    plt.plot(time, qifft, label="QIFFT")
     plt.xlim([min(time), max(time)])
     plt.ylim([np.min([original, qifft]), np.max([original, qifft])])
     plt.xlabel("Time (sec)")
@@ -56,8 +57,8 @@ def plotter(
     res_qifft = original - qifft
     res_fattls = original - fattls
     plt.subplot(3, 1, 3)
-    plt.plot(time, res_qifft, label='QIFFT residual')
-    plt.plot(time, res_fattls, label='FATT-LS residual')
+    plt.plot(time, res_qifft, label="QIFFT residual")
+    plt.plot(time, res_fattls, label="FATT-LS residual")
     plt.xlim([min(time), max(time)])
     plt.ylim(
         [np.min([res_qifft, res_fattls]), np.max([res_qifft, res_fattls])]
@@ -68,8 +69,8 @@ def plotter(
     plt.title("Residuals")
 
     plt.tight_layout()
-    if save and path is not None:
-        plt.savefig(f"{join(path, name)}.pdf")
+    if save_to:
+        plt.savefig(f"{join(save_to, name)}.pdf")
     if show:
         plt.show()
     plt.close()

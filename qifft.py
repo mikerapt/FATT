@@ -6,10 +6,11 @@ class QIFFT:
     """This class implements the Quadratically Interpolated
     Fast Fourier Transform (QIFFT) for sinusoidal analysis/synthesis
     according to https://ccrma.stanford.edu/STANM/stanms/stanm114/."""
+
     def __init__(self, fs, time, nfft, win, no_sins):
         self.fs = fs
         self.t = np.reshape(a=time, newshape=len(time))
-        self.pi2t = 2 * np.pi*self.t
+        self.pi2t = 2 * np.pi * self.t
         self.nfft = nfft
         self.w = win(len(time))
         self.w /= sum(self.w)
@@ -19,9 +20,9 @@ class QIFFT:
         """Reconstruct signal based on the
         estimated QIFFT sinusoidal parameters."""
         return np.sum(
-            amps[:, np.newaxis] * np.cos(
-                self.pi2t * freqs[:, np.newaxis] + phases[:, np.newaxis]
-            ), axis=0
+            amps[:, np.newaxis] *
+            np.cos(self.pi2t * freqs[:, np.newaxis] + phases[:, np.newaxis]),
+            axis=0,
         )
 
     def fft(self, signal):
@@ -29,7 +30,7 @@ class QIFFT:
         spectrum (signals are real) and the axis."""
         signal_fft = np.fft.fft(a=signal, n=self.nfft)
         length = len(signal_fft)
-        return signal_fft[:length // 2], np.arange(length)[:length // 2]
+        return signal_fft[: length // 2], np.arange(length)[: length // 2]
 
     def estimate(self, signal):
         """Estimate the sinusoidal parameters
@@ -50,8 +51,9 @@ class QIFFT:
             # based on quadratic interpolation:
             x1, x2, x3 = peak - 1, peak, peak + 1
             y1, y2, y3 = sig_abs_fft[x1], sig_abs_fft[x2], sig_abs_fft[x3]
-            x0 = ((y3 - y2) * (x2 + x1) - (y2 - y1) * (x3 + x2)) /\
-                 (2 * (y3 - 2 * y2 + y1))
+            x0 = ((y3 - y2) * (x2 + x1) - (y2 - y1) * (x3 + x2)) / (
+                2 * (y3 - 2 * y2 + y1)
+            )
             a = (y2 - y1) / (x2 + x1 - 2 * x0)
             y0 = y1 - a * (x1 - x0) ** 2
             # Convert to Hz (double because we work with half the spectrum):
@@ -71,6 +73,6 @@ class QIFFT:
         amps, freqs, phases = np.array(amps), np.array(freqs), np.array(phases)
         if self.no_sins < len(freqs):
             freqs, amps, phases = (
-                arr[:self.no_sins] for arr in (freqs, amps, phases)
+                arr[: self.no_sins] for arr in (freqs, amps, phases)
             )
         return freqs, amps, phases, self.reconstruct(freqs, amps, phases)
