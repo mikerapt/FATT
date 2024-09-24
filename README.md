@@ -19,7 +19,7 @@ For details see [`requirements.txt`](./requirements.txt).
 
 - [`qifft.py`](./qifft.py) This file contains the implementation of the QIFFT algorithm, which is used for comparison against FATT-LS.
 - [`fattls.py`](./fattls.py) This script implements FATT-LS, the proposed method.
-- [`utils.py`] (./utils.py) Contains utility functions used throughout the code, such as data loading, preprocessing, and plotting.
+- [`utils.py`](./utils.py) Contains utility functions used throughout the code, such as data loading, preprocessing, and plotting.
 - [`vowels.py`](./vowels.py) This script includes the experimental setup for vowel analysis, which compares the performance of the FATT and QIFFT methods on recorded vowels.
 
 ## Usage
