@@ -1,6 +1,6 @@
 # Fourier Attention (FATT) - Supplementary Code
 
-> ![IMPORTANT] Citation
+> [!IMPORTANT] Citation
 > Blah blah
 
 ## Overview
