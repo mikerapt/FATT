@@ -1,4 +1,4 @@
-# Fourier Attention (FATT) Mechanism - Supplementary Code
+# Fourier Attention (FATT) - Supplementary Code
 
 
 ## Overview
