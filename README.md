@@ -1,8 +1,5 @@
 # Fourier Attention (FATT) - Supplementary Code
 
-> [!IMPORTANT] Citation
-> Blah blah
-
 ## Overview
 
 This repository contains the official implementation of FATT with the Least Squares extension (FATT-LS), as proposed in the paper titled "Fourier Attention: The Attention Mechanism as a Frequency Analyzer". The goal of this project is to explore the use of the attention mechanism for frequency analysis in speech and signal processing tasks, offering an alternative to traditional methods like the Quadratically Interpolated FFT (QIFFT). This approach not only provides a novel method for frequency analysis but also lays the groundwork for a potentially new type of trainable layer, which could prove useful in more complex tasks, such as Text-To-Speech (TTS) synthesis. As an example, we compare the reconstruction of 10 recorded male and female speech vowel signals using both the FATT-LS and QIFFT methods.
