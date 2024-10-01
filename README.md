@@ -6,19 +6,17 @@ This repository contains the official implementation of FATT with the Least Squa
 
 ## Dependencies
 
-Install dependencies by running:
+In a python 3.10.13 environment install dependencies by running:
 ```bash
 pip install -r requirements.txt
 ```
-For details see [`requirements.txt`](./requirements.txt).
-
 
 ## File Descriptions
 
 - [`qifft.py`](./qifft.py) Contains the implementation of the QIFFT algorithm, which is used for comparison against FATT-LS.
 - [`fattls.py`](./fattls.py) Implements FATT-LS, the proposed method.
 - [`utils.py`](./utils.py) Contains utility functions used throughout the code, such as data loading, preprocessing, and plotting.
-- [`vowels.py`](./vowels.py) Includes an experimental setup for vowel analysis, comparing the performance of FATT and QIFFT on vowel frames.
+- [`vowels.py`](./vowels.py) Includes an example experimental setup for vowel analysis, comparing the performance of FATT and QIFFT on vowel frames.
 
 ## Usage
 
