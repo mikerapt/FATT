@@ -34,4 +34,4 @@ python vowels.py --help
 
 ## Citation
 
-If you want to use this code in your research or project, please cite the associated paper. For more details, you can view the full paper [here] (link will be made available soon).
+If you want to use this code in your research or project, please cite the associated paper. For more details, you can view the full paper [here](https://www.isca-archive.org/iberspeech_2024/raptakis24_iberspeech.pdf).
