@@ -5,7 +5,7 @@ from scipy.special import softmax
 class FATTLS:
     """This class implements the Fourier Attention (FATT) frequency estimator
     with the Least Squares approach (FATT-LS) for sinusoidal analysis/synthesis
-    according to [paper url]."""
+    according to https://www.isca-archive.org/iberspeech_2024/raptakis24_iberspeech.pdf"""
     def __init__(self, fs, time, df, f_min, f_max, no_sins, a, mode):
         # Hyperparameters:
         self.fs = fs
